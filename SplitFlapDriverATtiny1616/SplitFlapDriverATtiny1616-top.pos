@@ -1,0 +1,21 @@
+### Footprint positions - created on 2025-11-12T16:37:03-0500 ###
+### Printed by KiCad version 9.0.5
+## Unit = mm, Angle = deg.
+## Side : top
+# Ref     Val                Package                                     PosX       PosY       Rot  Side
+C1        300u               C_0603_1608Metric                       145.4150  -132.0800   90.0000  top
+C2        470n               C_0603_1608Metric                       127.0000  -106.6800  -90.0000  top
+C3        470n               C_0603_1608Metric                       132.0800  -106.6800  -90.0000  top
+C4        10u                C_0603_1608Metric                       134.6200  -106.6800  -90.0000  top
+C5        10u                C_0603_1608Metric                       137.2500  -102.0000    0.0000  top
+C6        470n               C_0603_1608Metric                       137.2500  -103.7500    0.0000  top
+J1        UPDI_Programming   PinHeader_1x03_P2.54mm_Vertical         132.9200   -84.4000   90.0000  top
+J2        BUS_POGO           PinHeader_1x04_P2.54mm_Vertical         123.8250  -105.4100    0.0000  top
+J3        Stepper_Connector  JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical   131.0250  -122.0000  -90.0000  top
+J4        Hall_Effect        PinHeader_1x03_P2.54mm_Vertical         124.6000   -89.6600    0.0000  top
+R1        0R                 R_0805_2012Metric                       129.5400  -106.6800   90.0000  top
+U1        ATtiny1616-MNR     VQFN-20-1EP_3x3mm_P0.4mm_EP1.7x1.7mm    135.6800   -91.6500    0.0000  top
+U2        ULN2003ADR         SOIC-16W_5.3x10.2mm_P1.27mm             144.5000  -121.2500  180.0000  top
+U3        SN65HVD72DR        SOIC-8_5.3x6.2mm_P1.27mm                132.7150  -112.3950  180.0000  top
+U5        SPX3819M5-L-3-3    SOT-23-5                                133.3625  -102.8000    0.0000  top
+## End
