@@ -37,7 +37,7 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 0.0,
+          "drill": 1.0,
           "height": 1.7,
           "width": 1.7
         },
@@ -507,8 +507,8 @@
       "gencad": "",
       "idf": "",
       "netlist": "",
-      "plot": "C:/Users/gordo/Documents/SplitFlapDisplay/SplitFlapDriverATtiny1616/",
-      "pos_files": "",
+      "plot": "FAB/",
+      "pos_files": "FAB/",
       "specctra_dsn": "",
       "step": "SplitFlapDriverATtiny1616V2.step",
       "svg": "",
