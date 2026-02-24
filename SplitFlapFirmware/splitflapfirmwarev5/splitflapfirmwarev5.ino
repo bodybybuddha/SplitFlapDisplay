@@ -5,9 +5,7 @@
 //               CONFIGURATION
 // ==========================================
 // !!! CHANGE THIS FOR EACH MODULE TODAY !!!
-// On the very first boot, the firmware will save this to EEPROM.
-// On all future boots/reflashes, this variable is ignored.
-const uint8_t HARDCODED_ID = 44; 
+const uint8_t HARDCODED_ID = 11; 
 
 const String FLAP_CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$&()-+=;q:%'.,/?*roygbpw";
 
@@ -16,12 +14,16 @@ const int ADDR_INIT = 0;          // 1 byte  - Initialization flag
 const int ADDR_HOME_OFFSET = 1;   // 2 bytes - Offset from magnet
 const int ADDR_TOTAL_STEPS = 3;   // 2 bytes - Step length of reel
 const int ADDR_MODULE_ID = 5;     // 1 byte  - The Module's Assigned ID (0-44)
-const int ADDR_MAP_START = 10;    // 128 bytes - Exact character positions
-const uint8_t INIT_VALUE = 0x5C;  // Magic number (Changed to 5C for this new logic)
+const int ADDR_AUTO_HOME = 6;     // 1 byte  - Toggle for booting logic
+const int ADDR_SAVED_POS = 7;     // 2 bytes - Last known step position
+const int ADDR_SAVED_INDEX = 9;   // 1 byte  - Last known character index
+const int ADDR_MAP_START = 12;    // 128 bytes - Exact character positions
+const uint8_t INIT_VALUE = 0x5D;  // Magic number updated for new map
 
 // Operating Variables
 uint8_t moduleId = 255;
 char idChars[2] = {'*', '*'};
+bool autoHomeEnabled = true;
 
 int stepsFromHallToZero = 2832;
 int totalStepsPerRev = 4096;
@@ -65,6 +67,14 @@ const uint8_t halfStepSequence[8][4] = {
 
 void saveHomeOffset() { EEPROM.put(ADDR_HOME_OFFSET, stepsFromHallToZero); }
 void saveTotalSteps() { EEPROM.put(ADDR_TOTAL_STEPS, totalStepsPerRev); }
+
+void saveState() {
+  // THE COMPROMISE: Only wear out the EEPROM if Auto-Home is explicitly DISABLED
+  if (!autoHomeEnabled) {
+    EEPROM.put(ADDR_SAVED_POS, currentStepPos);
+    EEPROM.put(ADDR_SAVED_INDEX, currentFlapIndex);
+  }
+}
 
 void updateIdChars() {
   if(moduleId < 100) {
@@ -183,6 +193,7 @@ void calibrateModule() {
   totalStepsPerRev = measuredSteps;
   saveTotalSteps();
   homeModule();
+  saveState();
 }
 
 void moveToChar(char targetChar) {
@@ -216,6 +227,7 @@ void moveToChar(char targetChar) {
 
   releaseMotor();
   currentFlapIndex = targetIndex; 
+  saveState(); 
 }
 
 // ==========================================
@@ -232,16 +244,12 @@ void setup() {
   pinMode(RS485_DE, OUTPUT);
   digitalWrite(RS485_DE, LOW); 
   
-  // --- THE BOOTSTRAP LOGIC ---
   if (EEPROM.read(ADDR_INIT) == INIT_VALUE) {
-    // THIS IS A FUTURE BOOT
-    // Ignore HARDCODED_ID entirely and load from memory
     EEPROM.get(ADDR_HOME_OFFSET, stepsFromHallToZero);
     EEPROM.get(ADDR_TOTAL_STEPS, totalStepsPerRev);
     moduleId = EEPROM.read(ADDR_MODULE_ID);
+    autoHomeEnabled = (EEPROM.read(ADDR_AUTO_HOME) == 1);
   } else {
-    // THIS IS THE VERY FIRST BOOT
-    // Format EEPROM and burn the HARDCODED_ID permanently
     EEPROM.write(ADDR_INIT, INIT_VALUE);
     saveHomeOffset();
     saveTotalSteps();
@@ -249,7 +257,9 @@ void setup() {
     moduleId = HARDCODED_ID; 
     EEPROM.write(ADDR_MODULE_ID, moduleId);
     
-    // Wipe character map clean
+    EEPROM.write(ADDR_AUTO_HOME, 1);
+    autoHomeEnabled = true;
+    
     for(int i=0; i<64; i++) {
       uint16_t empty = 0xFFFF;
       EEPROM.put(ADDR_MAP_START + (i*2), empty);
@@ -257,14 +267,24 @@ void setup() {
   }
 
   updateIdChars();
-
   rs485.begin(9600);
 
   if (moduleId != 255) {
     delay(moduleId * 150); 
   }
   
-  homeModule();
+  if (autoHomeEnabled) {
+    homeModule();
+    saveState(); // Will safely do nothing because autoHomeEnabled is true
+  } else {
+    // Restore state from memory
+    EEPROM.get(ADDR_SAVED_POS, currentStepPos);
+    
+    // Safety check in case memory is corrupted or uninitialized
+    if (currentStepPos >= totalStepsPerRev) currentStepPos = 0;
+    
+    currentFlapIndex = (int8_t)EEPROM.read(ADDR_SAVED_INDEX);
+  }
 }
 
 void loop() {
@@ -279,7 +299,7 @@ void loop() {
       
       case 3: 
         if (c == '-') parseState = 4;
-        else if (c == 'h') { homeModule(); parseState = 0; }
+        else if (c == 'h') { homeModule(); saveState(); parseState = 0; }
         else if (c == 'c') { calibrateModule(); parseState = 0; }
         else if (c == 'o') { buffer = ""; parseState = 5; }
         else if (c == 't') { buffer = ""; parseState = 6; }
@@ -287,6 +307,7 @@ void loop() {
         else if (c == 'g') { buffer = ""; parseState = 8; } 
         else if (c == 'w') { buffer = ""; tempIndex = -1; parseState = 9; } 
         else if (c == 'i') { buffer = ""; parseState = 10; } 
+        else if (c == 'a') { buffer = ""; parseState = 11; } 
         else if (c == 'e') { 
           for(int i=0; i<64; i++) {
             uint16_t empty = 0xFFFF;
@@ -345,6 +366,7 @@ void loop() {
             while(stepsToMove > 0) { stepBackward(1); stepsToMove--; }
             releaseMotor();
             currentFlapIndex = -2;
+            saveState(); 
           }
           parseState = 0;
         }
@@ -365,7 +387,7 @@ void loop() {
         }
         break;
 
-      case 10: // Manual ID Override via Serial
+      case 10: 
         if (isDigit(c)) buffer += c;
         else {
           if (buffer.length() > 0) {
@@ -376,11 +398,23 @@ void loop() {
           parseState = 0;
         }
         break;
+
+      case 11: 
+        if (isDigit(c)) buffer += c;
+        else {
+          if (buffer.length() > 0) {
+            autoHomeEnabled = (buffer.toInt() == 1);
+            EEPROM.write(ADDR_AUTO_HOME, autoHomeEnabled ? 1 : 0);
+            saveState(); // Instantly save current resting state if we just turned Auto-Home OFF
+          }
+          parseState = 0;
+        }
+        break;
     }
   }
 
   // Timeouts for number parsing
-  if ((parseState >= 5 && parseState <= 10) && (millis() - lastSerialTime > 50)) {
+  if ((parseState >= 5 && parseState <= 11) && (millis() - lastSerialTime > 50)) {
     if (buffer.length() > 0) {
       if (parseState == 5) { stepsFromHallToZero = buffer.toInt(); saveHomeOffset(); }
       if (parseState == 6) { totalStepsPerRev = buffer.toInt(); saveTotalSteps(); }
@@ -398,6 +432,7 @@ void loop() {
         while(stepsToMove > 0) { stepBackward(1); stepsToMove--; }
         releaseMotor();
         currentFlapIndex = -2;
+        saveState();
       }
       if (parseState == 9 && tempIndex != -1) {
         uint16_t pos = buffer.toInt();
@@ -407,6 +442,11 @@ void loop() {
         moduleId = buffer.toInt();
         EEPROM.write(ADDR_MODULE_ID, moduleId);
         updateIdChars();
+      }
+      if (parseState == 11) {
+        autoHomeEnabled = (buffer.toInt() == 1);
+        EEPROM.write(ADDR_AUTO_HOME, autoHomeEnabled ? 1 : 0);
+        saveState();
       }
     }
     parseState = 0;
