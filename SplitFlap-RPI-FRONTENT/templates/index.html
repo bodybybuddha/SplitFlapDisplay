@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split-Flap OS</title>
+    <style>
+        :root { 
+            --bg: #121212; --panel: #1e1e1e; --border: #333;
+            --accent: #007bff; --accent-hover: #0056b3;
+            --text: #e0e0e0; --text-muted: #888;
+            --green: #28a745; --orange: #fd7e14; --red: #dc3545; 
+            --flap-bg: #111;
+        }
+
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 800px; }
+        h3 { margin-top: 0; color: var(--text); }
+
+        .tab-bar { display: flex; background: var(--panel); border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); overflow: hidden; }
+        .tab-btn { flex: 1; padding: 15px; border: none; background: none; color: var(--text-muted); cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; }
+        .tab-btn:hover { background: #252525; color: white; }
+        .tab-btn.active { background: var(--accent); color: white; }
+
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .preview-wrapper { background: #000; padding: 15px; border-radius: 8px; border: 2px solid #444; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .preview-grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; }
+        .flap-unit { aspect-ratio: 2/3; background: var(--flap-bg); border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-family: 'Courier New', monospace; color: white; border-radius: 2px; }
+
+        .control-panel { margin-bottom: 15px; display: flex; gap: 20px; align-items: center; }
+        .line-input { width: 100%; font-size: 1.4rem; background: #080808; color: #0f0; border: 1px solid var(--border); margin: 6px 0; padding: 12px; box-sizing: border-box; font-family: 'Courier New', monospace; text-transform: uppercase; border-radius: 6px; }
+        .line-input:focus { outline: none; border-color: var(--accent); }
+
+        .color-palette { display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; background: #080808; padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+        .color-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; transition: transform 0.1s; }
+        .color-btn:hover { transform: scale(1.2); }
+
+        .playlist-area { margin-top: 15px; background: var(--panel); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
+        .playlist-item { background: #2a2a2a; padding: 10px; margin: 8px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--green); font-family: monospace; }
+        
+        .btn { padding: 12px 20px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 1rem; }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--accent); color: white; width: 100%; margin-top: 20px; padding: 18px; font-size: 1.2rem; }
+        .btn-success { background: var(--green); color: white; }
+        .btn-warning { background: var(--orange); color: white; }
+        .btn-secondary { background: #444; color: white; }
+        .btn-del { background: var(--red); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+
+        .apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 20px; }
+        .app-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 25px 15px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .app-card:hover { border-color: var(--accent); background: #252525; transform: translateY(-2px); }
+        .app-icon { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+        .app-name { font-weight: bold; display: block; margin-bottom: 5px; }
+        .app-desc { font-size: 0.8rem; color: var(--text-muted); }
+
+        .config-section { background: var(--panel); padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid var(--border); }
+        .tuning-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-top: 20px; }
+        .mod-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; font-size: 0.9rem; position: relative;}
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.8rem; color: #888; }
+        .val { color: white; font-family: monospace; font-size: 1.1rem; }
+        .btn-adj { padding: 5px 8px; background: #333; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.8rem; flex-grow: 1; }
+        .btn-adj:hover { background: #555; }
+        .btn-calib { width: 100%; background: #444; color: white; border: none; padding: 5px; margin-top: 5px; cursor: pointer; border-radius: 4px; font-size: 0.75rem; }
+        .btn-calib:hover { background: var(--accent); }
+        .btn-home-mini { width: 100%; background: #222; color: #aaa; border: 1px solid #444; padding: 5px; margin-top: 5px; cursor: pointer; border-radius: 4px; font-size: 0.75rem; }
+        .btn-home-mini:hover { background: var(--green); color: white; border-color: var(--green); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tab-bar">
+        <button id="tab-control" class="tab-btn active" onclick="switchTab('control')">CONTROL</button>
+        <button id="tab-apps" class="tab-btn" onclick="switchTab('apps')">APPS</button>
+        <button id="tab-tuning" class="tab-btn" onclick="switchTab('tuning')">TUNING & SETTINGS</button>
+    </div>
+
+    <div id="page-control" class="page active">
+        <div class="preview-wrapper"><div class="preview-grid" id="preview"></div></div>
+
+        <div class="control-panel">
+            <label style="cursor: pointer;"><input type="checkbox" id="modeToggle" onchange="toggleMultiMode()"> <strong>Multi-Page Playlist</strong></label>
+            <label style="cursor: pointer;"><input type="checkbox" id="centerToggle" onchange="updatePreview()"> Center Text</label>
+            <button class="btn btn-secondary" style="margin-left:auto; padding: 8px 15px;" onclick="clearDisplay()">Clear</button>
+        </div>
+
+        <div class="color-palette">
+            <button class="color-btn" onclick="insertColor('🟥')" title="Red">🟥</button>
+            <button class="color-btn" onclick="insertColor('🟧')" title="Orange">🟧</button>
+            <button class="color-btn" onclick="insertColor('🟨')" title="Yellow">🟨</button>
+            <button class="color-btn" onclick="insertColor('🟩')" title="Green">🟩</button>
+            <button class="color-btn" onclick="insertColor('🟦')" title="Blue">🟦</button>
+            <button class="color-btn" onclick="insertColor('🟪')" title="Purple">🟪</button>
+            <button class="color-btn" onclick="insertColor('⬜')" title="White">⬜</button>
+            <button class="color-btn" onclick="insertColor('⬛')" title="Black (Space)">⬛</button>
+        </div>
+
+        <input type="text" id="L1" class="line-input" placeholder="LINE 1" oninput="updatePreview()">
+        <input type="text" id="L2" class="line-input" placeholder="LINE 2" oninput="updatePreview()">
+        <input type="text" id="L3" class="line-input" placeholder="LINE 3" oninput="updatePreview()">
+
+        <div id="multiControls" style="display:none;" class="playlist-area">
+            <button class="btn btn-success" style="width:100%" onclick="addToPlaylist()">+ Add Current View to Playlist</button>
+            <div id="playlistList" style="margin-top:15px;"></div>
+            <div style="margin-top:15px; padding-top:10px; border-top:1px solid #444;">
+                <label>Loop Delay (seconds): <input type="number" id="delayInput" value="5" style="width: 60px; padding: 5px; background:#111; color:white; border:1px solid #555;"></label>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="sync()">PUSH TO DISPLAY</button>
+    </div>
+
+    <div id="page-apps" class="page">
+        <h3>Available Apps</h3>
+        <p style="color:#888;">Select an app to take over the display loop.</p>
+        <div class="apps-grid">
+            <div class="app-card" onclick="runApp('dashboard')">
+                <span class="app-icon">🏠</span><span class="app-name">Dashboard</span><span class="app-desc">Clock & Weather</span>
+            </div>
+            <div class="app-card" onclick="runApp('metro')">
+                <span class="app-icon">🚇</span><span class="app-name">Metro</span><span class="app-desc">Live Train Times</span>
+            </div>
+            <div class="app-card" onclick="runApp('weather')">
+                <span class="app-icon">🌤️</span><span class="app-name">Weather</span><span class="app-desc">Current Conditions</span>
+            </div>
+             <div class="app-card" onclick="runApp('stocks')">
+                <span class="app-icon">📈</span><span class="app-name">Stocks</span><span class="app-desc">Live Ticker</span>
+            </div>
+            <div class="app-card" onclick="runApp('sports')">
+                <span class="app-icon">🏒</span><span class="app-name">Sports</span><span class="app-desc">NHL Scores</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-tuning" class="page">
+        <div class="config-section">
+            <h3>Global Settings</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div style="grid-column: span 2;">
+                    <label style="display:block; margin-bottom:5px; color:#888;">OpenWeatherMap API Key</label>
+                    <input type="password" id="keyInput" class="line-input" style="font-size:1rem; margin:0;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:5px; color:#888;">Zip Code</label>
+                    <input type="text" id="zipInput" class="line-input" style="font-size:1rem; margin:0;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:5px; color:#888;">Timezone</label>
+                    <input type="text" id="tzInput" class="line-input" style="font-size:1rem; margin:0;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:5px; color:#888;">MBTA Stop ID</label>
+                    <input type="text" id="stopInput" class="line-input" style="font-size:1rem; margin:0;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:5px; color:#888;">MBTA Route (e.g., Orange)</label>
+                    <input type="text" id="routeInput" class="line-input" style="font-size:1rem; margin:0;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:5px; color:#888;">Stocks (comma separated)</label>
+                    <input type="text" id="stockInput" class="line-input" style="font-size:1rem; margin:0;">
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom:5px; color:#888;">NHL Teams (comma separated)</label>
+                    <input type="text" id="nhlInput" class="line-input" style="font-size:1rem; margin:0;">
+                </div>
+            </div>
+            <button class="btn btn-secondary" style="margin-top:15px;" onclick="saveGlobal()">Save Settings</button>
+        </div>
+
+        <div class="config-section" style="border-left: 5px solid var(--green); margin-top: 20px;">
+            <h3>Universal Firmware Flashing</h3>
+            <p style="color:#888; font-size: 0.9rem;">Plug in a <b>single</b> unassigned module to the RS485 line to assign its permanent EEPROM ID.</p>
+            <div style="display:flex; gap:15px; align-items:center;">
+                <label>Assign ID: 
+                    <input type="number" id="newModId" min="0" max="44" value="0" class="line-input" style="width:70px; font-size:1rem; margin:0;">
+                </label>
+                <button class="btn btn-success" onclick="assignModuleId()">Flash ID to Module</button>
+            </div>
+        </div>
+
+        <div class="config-section" style="border-left: 5px solid var(--accent); margin-top: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div>
+                    <h3>Per-Character Fine Tuning</h3>
+                    <p style="color:#888; font-size: 0.9rem;">Manually adjust and lock in the exact step count for specific characters into EEPROM.</p>
+                </div>
+                <div class="color-palette" style="margin: 0; padding: 5px;">
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('🟥')" title="Red">🟥</button>
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('🟧')" title="Orange">🟧</button>
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('🟨')" title="Yellow">🟨</button>
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('🟩')" title="Green">🟩</button>
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('🟦')" title="Blue">🟦</button>
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('🟪')" title="Purple">🟪</button>
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('⬜')" title="White">⬜</button>
+                    <button class="color-btn" style="font-size: 1.2rem;" onclick="insertColor('⬛')" title="Black">⬛</button>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:15px; align-items:center; margin-top: 15px;">
+                <label>Module: 
+                    <input type="number" id="tuneMod" min="0" max="44" value="0" class="line-input" style="width:70px; font-size:1rem; margin:0;">
+                </label>
+                <label>Character: 
+                    <input type="text" id="tuneChar" maxlength="2" value="A" class="line-input" style="width:60px; font-size:1rem; margin:0; text-align:center;">
+                </label>
+                <label>Absolute Step: 
+                    <input type="number" id="tuneStep" min="0" max="4095" value="100" class="line-input" style="width:100px; font-size:1rem; margin:0;">
+                </label>
+            </div>
+            <div style="display:flex; gap:10px; margin-top: 15px;">
+                <button class="btn btn-secondary" onclick="tuneAction('goto')">1. GOTO STEP (Test)</button>
+                <button class="btn btn-success" onclick="tuneAction('save')">2. LOCK IN (Save to EEPROM)</button>
+                <button class="btn btn-del" style="margin-left:auto;" onclick="tuneAction('erase')">ERASE EEPROM MAP</button>
+            </div>
+        </div>
+
+        <div class="config-section" style="border-left: 5px solid var(--orange);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0;">Calibration</h3>
+                <button class="btn btn-warning" onclick="homeAll()">HOME ALL MODULES (BROADCAST)</button>
+            </div>
+            <div class="tuning-grid" id="tuningGrid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let playlist = [];
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        document.getElementById('page-' + name).classList.add('active');
+        if(name === 'tuning') loadSettings();
+    }
+
+    function insertColor(emoji) {
+        const active = document.activeElement;
+        const target = (active && active.classList.contains('line-input')) ? active : document.getElementById('L1');
+        
+        if (target.id === 'tuneChar') {
+            target.value = emoji;
+            return;
+        }
+
+        let chars = Array.from(target.value);
+        if (chars.length >= 15) return; 
+        
+        const start = target.selectionStart;
+        const text = target.value;
+        
+        const before = text.substring(0, start);
+        const after = text.substring(target.selectionEnd);
+        
+        target.value = before + emoji + after;
+        
+        target.focus();
+        target.selectionStart = target.selectionEnd = start + emoji.length;
+        
+        updatePreview();
+    }
+
+    function updatePreview() {
+        const grid = document.getElementById('preview');
+        grid.innerHTML = '';
+        const centered = document.getElementById('centerToggle').checked;
+        
+        let fullStr = "";
+        [1,2,3].forEach(n => {
+            let inputEl = document.getElementById('L'+n);
+            let chars = Array.from(inputEl.value);
+            
+            if(chars.length > 15) {
+                let start = inputEl.selectionStart;
+                chars = chars.slice(0, 15);
+                inputEl.value = chars.join('');
+                inputEl.setSelectionRange(start, start); 
+            }
+            
+            let displayChars = chars.map(c => c.toUpperCase());
+            
+            if(centered) {
+                let pad = Math.floor((15 - displayChars.length)/2);
+                for(let i=0; i<pad; i++) displayChars.unshift(" ");
+            }
+            while(displayChars.length < 15) displayChars.push(" ");
+            
+            fullStr += displayChars.join('');
+        });
+
+        for(let char of Array.from(fullStr)) {
+            const div = document.createElement('div');
+            div.className = 'flap-unit';
+            div.innerText = char === " " ? "" : char;
+            grid.appendChild(div);
+        }
+        return fullStr;
+    }
+
+    function clearDisplay() {
+        document.getElementById('L1').value = ""; document.getElementById('L2').value = ""; document.getElementById('L3').value = "";
+        updatePreview();
+    }
+
+    function toggleMultiMode() {
+        document.getElementById('multiControls').style.display = document.getElementById('modeToggle').checked ? 'block' : 'none';
+    }
+
+    function addToPlaylist() { playlist.push(updatePreview()); renderPlaylist(); }
+
+    function renderPlaylist() {
+        const list = document.getElementById('playlistList');
+        list.innerHTML = playlist.length ? '' : '<div style="color:#666; font-style:italic;">Queue is empty</div>';
+        playlist.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'playlist-item';
+            div.innerHTML = `<span><strong>Pg ${idx+1}:</strong> ${item.substring(0,12)}...</span><button class="btn-del" onclick="removeFromPlaylist(${idx})">DEL</button>`;
+            list.appendChild(div);
+        });
+    }
+
+    function removeFromPlaylist(idx) { playlist.splice(idx, 1); renderPlaylist(); }
+
+    function sync() {
+        const payload = {
+            pages: document.getElementById('modeToggle').checked ? playlist : [updatePreview()],
+            delay: document.getElementById('delayInput').value
+        };
+        fetch('/update_playlist', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
+        .then(() => alert("Sent to Display"));
+    }
+
+    function runApp(appName) {
+        fetch('/run_app', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({app: appName}) })
+        .then(() => alert(`Started ${appName.toUpperCase()} App`));
+    }
+
+    function loadSettings() {
+        const grid = document.getElementById('tuningGrid');
+        grid.innerHTML = '<div style="color:white;">Loading configuration...</div>';
+        
+        fetch('/settings').then(r => r.json()).then(data => {
+            document.getElementById('zipInput').value = data.zip_code || "";
+            document.getElementById('tzInput').value = data.timezone || "";
+            document.getElementById('keyInput').value = data.weather_api_key || "";
+            document.getElementById('stopInput').value = data.mbta_stop || "";
+            document.getElementById('routeInput').value = data.mbta_route || "";
+            document.getElementById('stockInput').value = data.stocks_list || "";
+            document.getElementById('nhlInput').value = data.nhl_teams || "";
+
+            grid.innerHTML = '';
+            for(let i=0; i<45; i++) {
+                const offset = data.offsets[i.toString()] || 2832;
+                const steps = data.calibrations[i.toString()] || 4096; 
+                
+                const el = document.createElement('div');
+                el.className = 'mod-card';
+                el.innerHTML = `
+                    <strong style="color:var(--accent)">MOD ${i.toString().padStart(2,'0')}</strong>
+                    <div style="margin-top:8px;">
+                        <div class="data-row"><span>Offset</span> <span>Total Steps</span></div>
+                        <div class="data-row"><span class="val" id="off-${i}">${offset}</span><span class="val" id="cal-${i}" style="color:var(--orange)">${steps}</span></div>
+                    </div>
+                    <div style="display:flex; justify-content:center; gap:4px; margin-top:5px;">
+                        <button class="btn-adj" onclick="adjust(${i}, -32)">-32</button>
+                        <button class="btn-adj" onclick="adjust(${i}, -1)">-1</button>
+                        <button class="btn-adj" onclick="adjust(${i}, 1)">+1</button>
+                        <button class="btn-adj" onclick="adjust(${i}, 32)">+32</button>
+                    </div>
+                    <button class="btn-home-mini" onclick="homeOne(${i})">HOME</button>
+                    <button class="btn-calib" onclick="calibrateOne(${i}, this)">MEASURE STEPS</button>
+                `;
+                grid.appendChild(el);
+            }
+        });
+    }
+
+    function saveGlobal() {
+        const payload = {
+            action: 'save_global',
+            zip_code: document.getElementById('zipInput').value,
+            timezone: document.getElementById('tzInput').value,
+            weather_api_key: document.getElementById('keyInput').value,
+            mbta_stop: document.getElementById('stopInput').value,
+            mbta_route: document.getElementById('routeInput').value,
+            stocks_list: document.getElementById('stockInput').value,
+            nhl_teams: document.getElementById('nhlInput').value
+        };
+        fetch('/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) })
+        .then(() => alert("Settings Saved"));
+    }
+
+    function adjust(id, delta) {
+        fetch('/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id, action: 'adjust', delta: delta}) })
+        .then(r => r.json()).then(d => document.getElementById(`off-${id}`).innerText = d.new_offset);
+    }
+    
+    function homeOne(id) { fetch('/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id, action: 'home_one'}) }); }
+    
+    function homeAll() { if(confirm("Are you sure you want to re-home all 45 modules via broadcast?")) fetch('/home_all'); }
+    
+    function calibrateOne(id, btn) {
+        if(!confirm(`Calibrate Module ${id}? It will spin 360° to measure steps.`)) return;
+        btn.innerText = "Measuring..."; btn.disabled = true;
+        fetch('/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: id, action: 'calibrate'}) })
+        .then(r => r.json()).then(data => {
+            btn.disabled = false; btn.innerText = "MEASURE STEPS";
+            if(data.status === 'success') {
+                document.getElementById(`cal-${id}`).innerText = data.steps;
+                alert(`Module ${id} calibrated: ${data.steps} steps/rev.`);
+            } else alert("Calibration failed.");
+        });
+    }
+
+    function tuneAction(action) {
+        const modId = document.getElementById('tuneMod').value;
+        const char = document.getElementById('tuneChar').value;
+        const step = document.getElementById('tuneStep').value;
+        
+        if (action === 'erase' && !confirm(`Erase all custom character mappings for Module ${modId}?`)) return;
+        
+        fetch('/custom_tune', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: action, id: modId, char: char, step: step })
+        }).then(r => r.json()).then(data => {
+            if(action === 'save') alert(`Saved ${char} at step ${step} for Module ${modId}`);
+            if(action === 'erase') alert(`EEPROM map erased for Module ${modId}`);
+        });
+    }
+
+    // NEW UNIVERSAL FLASHING UI HOOK
+    function assignModuleId() {
+        const newId = document.getElementById('newModId').value;
+        if(!confirm(`WARNING: Make sure ONLY ONE module is connected to the data line! Assign ID ${newId} to connected module?`)) return;
+        
+        fetch('/assign_id', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: newId })
+        }).then(r => r.json()).then(data => {
+            alert(`ID ${newId} assigned successfully.`);
+        });
+    }
+
+    updatePreview();
+</script>
+</body>
+</html>
