@@ -508,7 +508,7 @@
       "idf": "",
       "netlist": "",
       "plot": "FAB/",
-      "pos_files": "FAB/",
+      "pos_files": "Fabrication Files/",
       "specctra_dsn": "",
       "step": "SplitFlapDriverATtiny1616V2.step",
       "svg": "",
