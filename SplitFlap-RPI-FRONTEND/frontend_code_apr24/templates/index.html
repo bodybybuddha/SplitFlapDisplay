@@ -41,6 +41,23 @@ h3{margin-top:0;color:var(--text)}
 .preview-wrapper{background:#000;padding:12px;border-radius:8px;border:2px solid #444;margin-bottom:16px;box-shadow:0 4px 10px rgba(0,0,0,.5)}
 .preview-grid{display:grid;grid-template-columns:repeat(15,1fr);gap:3px}
 .flap-unit{aspect-ratio:2/3;background:var(--flap-bg);border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:1rem;font-family:'Courier New',monospace;color:#fff;border-radius:2px}
+
+/* ── ANIMATED FLAP (live preview) ── */
+.live-flap{aspect-ratio:2/3;position:relative;perspective:300px;font-family:'Courier New',monospace;font-size:clamp(1.8rem,6vw,4.5rem);user-select:none}
+.live-flap .fh{position:absolute;left:0;right:0;height:50%;overflow:hidden;background:var(--flap-bg);border:1px solid #333}
+.live-flap .ft{top:0;border-radius:2px 2px 0 0;border-bottom:none}
+.live-flap .fb{bottom:0;border-radius:0 0 2px 2px;border-top:none}
+.live-flap .fc{position:absolute;left:0;right:0;height:200%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:inherit;line-height:1}
+.live-flap .ft .fc{top:0}
+.live-flap .fb .fc{bottom:0}
+.live-flap .ff{position:absolute;left:0;right:0;height:50%;overflow:hidden;z-index:2;background:var(--flap-bg);border:1px solid #333;backface-visibility:hidden}
+.live-flap .ffd{top:0;border-radius:2px 2px 0 0;border-bottom:none;transform-origin:bottom center;animation:lfDown 40ms ease-in forwards}
+.live-flap .ffd .fc{top:0}
+.live-flap .ffu{bottom:0;border-radius:0 0 2px 2px;border-top:none;transform-origin:top center;transform:rotateX(90deg);animation:lfUp 40ms ease-out forwards;animation-delay:40ms}
+.live-flap .ffu .fc{bottom:0}
+.live-flap .fd{position:absolute;left:0;right:0;height:1px;top:50%;background:#000;z-index:3}
+@keyframes lfDown{from{transform:rotateX(0)}to{transform:rotateX(-90deg)}}
+@keyframes lfUp{from{transform:rotateX(90deg)}to{transform:rotateX(0)}}
 .homing-overlay{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);color:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.4rem;letter-spacing:2px;border-radius:6px}
 
 /* ── CONTROL INPUTS ── */
@@ -673,6 +690,74 @@ function showToast(msg, type='success'){
 }
 
 // ============================================================
+//  ANIMATED LIVE FLAPS
+// ============================================================
+const liveFlaps = {control: [], apps: []};
+
+class LiveFlap {
+  constructor(el) {
+    this.el = el;
+    this.curIdx = 0;
+    this.tgtIdx = 0;
+    this.busy = false;
+    this.queued = null;
+  }
+  setTarget(idx, delay) {
+    this.tgtIdx = idx;
+    if (this.curIdx === this.tgtIdx) return;
+    if (this.busy) { this.queued = idx; return; }
+    setTimeout(() => this._step(), delay);
+  }
+  _step() {
+    if (this.curIdx === this.tgtIdx) {
+      this.busy = false;
+      if (this.queued !== null) { this.tgtIdx = this.queued; this.queued = null; if (this.curIdx !== this.tgtIdx) this._step(); }
+      return;
+    }
+    this.busy = true;
+    const next = (this.curIdx + 1) % 64;
+    this._flip(CHAR_MAP[this.curIdx], CHAR_MAP[next], () => { this.curIdx = next; this._render(CHAR_MAP[next]); this._step(); });
+  }
+  _render(ch) {
+    const d = STATE_DISPLAY[ch] || ch;
+    const v = d === ' ' ? '' : d;
+    this.el.querySelector('.ft .fc').textContent = v;
+    this.el.querySelector('.fb .fc').textContent = v;
+  }
+  _flip(from, to, done) {
+    const fd = STATE_DISPLAY[from] || from;
+    const td = STATE_DISPLAY[to] || to;
+    const fv = fd === ' ' ? '' : fd;
+    const tv = td === ' ' ? '' : td;
+    this.el.querySelectorAll('.ff').forEach(e => e.remove());
+    const dn = document.createElement('div'); dn.className = 'ff ffd';
+    const dnc = document.createElement('span'); dnc.className = 'fc'; dnc.textContent = fv; dn.appendChild(dnc);
+    const up = document.createElement('div'); up.className = 'ff ffu';
+    const upc = document.createElement('span'); upc.className = 'fc'; upc.textContent = tv; up.appendChild(upc);
+    this.el.querySelector('.fb .fc').textContent = tv;
+    this.el.appendChild(dn); this.el.appendChild(up);
+    setTimeout(() => { dn.remove(); up.remove(); this.el.querySelector('.ft .fc').textContent = tv; done(); }, 90);
+  }
+}
+
+function initLiveGrids() {
+  ['control', 'apps'].forEach(tab => {
+    const grid = document.querySelector(`.live-grid-${tab}`);
+    if (!grid) return;
+    grid.innerHTML = '';
+    liveFlaps[tab] = [];
+    for (let i = 0; i < 45; i++) {
+      const el = document.createElement('div');
+      el.className = 'live-flap';
+      el.innerHTML = '<div class="fh ft"><span class="fc"></span></div><div class="fh fb"><span class="fc"></span></div><div class="fd"></div>';
+      grid.appendChild(el);
+      liveFlaps[tab].push(new LiveFlap(el));
+    }
+  });
+}
+initLiveGrids();
+
+// ============================================================
 //  LIVE VIEW POLLING
 // ============================================================
 setInterval(()=>{
@@ -683,17 +768,14 @@ setInterval(()=>{
       if(el) el.style.display = data.is_homed ? 'none' : 'flex';
     });
 
-    // Live display grids
-    document.querySelectorAll('.live-grid-control, .live-grid-apps').forEach(grid=>{
-      grid.innerHTML='';
-      const s = data.state || '';
-      for(let i=0;i<45;i++){
-        let ch = s[i]||' ';
-        const disp = STATE_DISPLAY[ch]||ch;
-        const div = document.createElement('div');
-        div.className='flap-unit';
-        div.innerText = disp===' '?'':disp;
-        grid.appendChild(div);
+    // Animated live display grids
+    const s = data.state || '';
+    ['control','apps'].forEach(tab=>{
+      const fa = liveFlaps[tab];
+      for(let i=0; i<fa.length; i++){
+        const ch = s[i] || ' ';
+        const idx = CHAR_MAP.indexOf(ch);
+        fa[i].setTarget(idx >= 0 ? idx : 0, i * 5);
       }
     });
 

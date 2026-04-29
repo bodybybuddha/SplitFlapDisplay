@@ -262,22 +262,22 @@ def send_to_display(text, order=None, raw=False, step_delay_ms=15):
 
     max_dist = 0
     with serial_lock:
-        if ser:
-            for i in order:
-                if i >= len(clean_text):
-                    continue
-                char = clean_text[i]
+        for i in order:
+            if i >= len(clean_text):
+                continue
+            char = clean_text[i]
+            if ser:
                 ser.write(f"m{i:02d}-{char}\n".encode())
                 ser.flush()
                 time.sleep(step_delay_ms / 1000.0)
 
-                target_idx = FLAP_CHARS.find(char)
-                if target_idx == -1:
-                    target_idx = 0
-                dist = 128 if current_indices[i] == -1 else (target_idx - current_indices[i]) % 64
-                if dist > max_dist:
-                    max_dist = dist
-                current_indices[i] = target_idx
+            target_idx = FLAP_CHARS.find(char)
+            if target_idx == -1:
+                target_idx = 0
+            dist = 128 if current_indices[i] == -1 else (target_idx - current_indices[i]) % 64
+            if dist > max_dist:
+                max_dist = dist
+            current_indices[i] = target_idx
 
     current_display_string = clean_text
     is_homed = True
