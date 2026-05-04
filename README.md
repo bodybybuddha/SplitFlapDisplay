@@ -22,6 +22,7 @@ Modules communicate over a shared RS485 bus. A Raspberry Pi running a Python web
 
 ```
 CAD/                              - 3D printable parts (Bambu Lab profiles included)
+FlapsGenerator/                   - OpenSCAD code to automatically generate (custom) flaps
 SplitFlapDriverATtiny1616 V2 KiCad/  - Driver PCB KiCad that I used in the video, for my build
 SplitFlapDriverATtiny1616V3       - Updated Driver PCB KiCad project, which should be slightly cheaper to manufacture
 SplitFlapBusBoard KiCad/          - Bus board KiCad project
@@ -97,6 +98,10 @@ Parts per module:
 - 64 Flaps
 
 ---
+
+### Creating your own flaps
+
+If you want to generate your own flaps, with your own font, size and characters, you can use the OpenSCAD script to automatically generate this.
 
 ## Firmware
 
