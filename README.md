@@ -98,11 +98,11 @@ Parts per module:
 - DIN Rail Mount, Wire Retainer
 - 64 Flaps
 
----
-
 ### Creating your own flaps
 
 If you want to generate your own flaps, with your own font, size and characters, you can use the OpenSCAD script to automatically generate this.
+
+---
 
 ## Firmware
 
