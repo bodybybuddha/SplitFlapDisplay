@@ -60,9 +60,11 @@ Note: R1 is a 0 Ohm resistor.
 | A3144 Hall Effect Sensor | 1 | 45 |
 | **28BYJ-48 12V Stepper Motor**| 1 | 45 |
 | Driver Board | 1 | 45 |
-| Pogo Pins | 4 | 180 |
+| Pogo Pins *1 | 4 | 180 |
 | 3x1mm N52 Magnet | 1 | 45 |
 | 3-Pin JST Connector | 1 | 45 |
+
+*1 -  Pogo Pin: total length 9mm needle head 2.0mm tube length 5.0mm tail length 2.0mm tail diameter 1.0mm (https://a.co/d/0a69mnW1)
 
 Note: Keep in mind, the driver boards are designed to be used with 12V motors, not the common 5V variety.
 
