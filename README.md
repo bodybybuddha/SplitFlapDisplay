@@ -32,6 +32,7 @@ Reference Docs/                   - Component datasheets
 BOM.md                            - Bill of materials
 
 **OnShape Model:** https://cad.onshape.com/documents/87c916b33ca5d6492b457485/w/b3e5f0f05f6619e6e7931347/e/582ef2164e20b0aa994708ab
+```
 
 ---
 
